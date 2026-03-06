@@ -1,0 +1,29 @@
+# Entornos Virtuales
+.venv/
+venv/
+env/
+
+# Variables de Entorno (¡Nunca subir claves API!)
+.env
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Archivos de caché del modelo Whisper (opcional pero recomendado)
+~/.cache/huggingface/
+.cache/
+
+# Archivos multimedia temporales o generados (no queremos subir videos pesados)
+temp/
+*.mp4
+*.mkv
+*.avi
+*.wav
+*.mp3
+*.json
+
+# Excepciones si de verdad queremos guardar o tener un sample json, etc (opcional)
+!gui/
+!modules/

@@ -1,0 +1,19 @@
+[project]
+name = "video-doblaje"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13, <3.14"
+dependencies = [
+    "audioop-lts>=0.2.2",
+    "customtkinter>=5.2.2",
+    "deep-translator>=1.11.4",
+    "edge-tts>=7.2.7",
+    "faster-whisper>=1.2.1",
+    "google-genai>=1.66.0",
+    "moviepy>=2.2.1",
+    "pydantic>=2.12.5",
+    "pydub>=0.25.1",
+    "python-dotenv>=1.2.2",
+    "yt-dlp>=2026.3.3",
+]
