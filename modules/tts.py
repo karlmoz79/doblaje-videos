@@ -8,7 +8,7 @@ async def _generate_audio(text: str, voice: str, path: str):
     communicate = edge_tts.Communicate(text, voice)
     await communicate.save(path)
 
-def generate_speech(translated_json_path: str, output_folder: str, voice: str = 'es-ES-AlvaroNeural') -> str:
+def generate_speech(translated_json_path: str, output_folder: str, voice: str = 'es-MX-DaliaNeural') -> str:
     """
     Toma el archivo JSON traducido, genera el audio de cada segmento 
     y los empalma en una pista de audio unificada respetando los timestamps originales.

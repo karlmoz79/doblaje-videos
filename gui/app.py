@@ -12,81 +12,147 @@ class DoblajeApp(ctk.CTk):
 
         # Configuración de la ventana principal
         self.title("Doblaje Automático de Videos")
-        self.geometry("700x520")
-        self.resizable(False, False)
+        self.geometry("800x700")
+        self.resizable(True, True)
+
+        # Optimización para Linux: Evitar escalado fraccionario (1.1, 1.25)
+        # Esto suele causar textos y bordes pixelados en monitores X11/Wayland.
+        ctk.set_widget_scaling(1.0)
+        ctk.set_window_scaling(1.0)
+        ctk.set_appearance_mode("light")
+        
+        # Paleta de colores Premium Light
+        ACCENT_COLOR = "#0ea5e9" # Azul cielo moderno
+        HOVER_COLOR = "#0284c7"
+        BG_COLOR = "#f4f4f5"     # Fondo principal claro
+        FRAME_COLOR = "#ffffff"  # Fondo de la tarjeta central
+        
+        self.configure(fg_color=BG_COLOR)
 
         # Configuración de la grilla (para centrar elementos)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
         # ---------------------------------------------
-        # 1. Marco Principal
+        # 1. Marco Principal (Caja central estilo Web)
         # ---------------------------------------------
-        self.main_frame = ctk.CTkFrame(self)
-        self.main_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        self.main_frame = ctk.CTkFrame(self, fg_color=FRAME_COLOR, corner_radius=24, border_width=1, border_color="#27272a")
+        self.main_frame.grid(row=0, column=0, padx=40, pady=40, sticky="nsew")
         self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_rowconfigure(5, weight=1) # Para que el log ocupe el resto
 
-        # Título dentro de la interfaz
-        self.title_label = ctk.CTkLabel(self.main_frame, text="🎙️ App de Doblaje Automático", 
-                                        font=ctk.CTkFont(size=24, weight="bold"))
-        self.title_label.grid(row=0, column=0, padx=20, pady=20)
-
-        # ---------------------------------------------
-        # 2. Área de selección local (.mp4)
-        # ---------------------------------------------
-        self.file_button = ctk.CTkButton(self.main_frame, text="📁 Seleccionar archivo .mp4", command=self.select_file)
-        self.file_button.grid(row=1, column=0, padx=20, pady=10)
-
-        self.file_path_label = ctk.CTkLabel(self.main_frame, text="Ningún archivo seleccionado", text_color="gray")
-        self.file_path_label.grid(row=2, column=0, padx=20, pady=(0, 10))
-
-        # ---------------------------------------------
-        # 3. Separador 
-        # ---------------------------------------------
-        self.or_label = ctk.CTkLabel(self.main_frame, text="— O —", font=ctk.CTkFont(size=14))
-        self.or_label.grid(row=3, column=0, pady=5)
-
-        # ---------------------------------------------
-        # 4. Campo de texto para Link remoto (YouTube)
-        # ---------------------------------------------
-        self.youtube_entry = ctk.CTkEntry(self.main_frame, placeholder_text="🔗 Ingresar link de YouTube", width=400)
-        self.youtube_entry.grid(row=4, column=0, padx=20, pady=10)
-
-        # ---------------------------------------------
-        # 5. Acción Principal
-        # ---------------------------------------------
-        self.process_button = ctk.CTkButton(self.main_frame, text="▶️ Procesar", 
-                                            font=ctk.CTkFont(size=16, weight="bold"), 
-                                            fg_color="green", hover_color="darkgreen", 
-                                            command=self.start_processing)
-        self.process_button.grid(row=5, column=0, padx=20, pady=20)
-
-        # ---------------------------------------------
-        # 6. Progreso del estado (Loading y Logs)
-        # ---------------------------------------------
-        self.progress_bar = ctk.CTkProgressBar(self.main_frame, width=400)
-        self.progress_bar.grid(row=6, column=0, padx=20, pady=10)
-        self.progress_bar.set(0) # Inicializar en vacío
-
-        # Cuadro de texto para Logs
-        self.log_textbox = ctk.CTkTextbox(self.main_frame, height=100, width=550, state="disabled")
-        self.log_textbox.grid(row=7, column=0, padx=20, pady=10)
+        # Título y subtítulo
+        self.title_label = ctk.CTkLabel(
+            self.main_frame, 
+            text="Studio de Doblaje AI", 
+            font=ctk.CTkFont(family="Inter", size=32, weight="bold"),
+            text_color="#18181b"
+        )
+        self.title_label.grid(row=0, column=0, padx=30, pady=(40, 5))
         
-        self.log_message("✅ Interfaz lista. Esperando instrucción...")
+        self.subtitle_label = ctk.CTkLabel(
+            self.main_frame, 
+            text="Sube un video o pega un enlace de YouTube para comenzar el doblaje", 
+            font=ctk.CTkFont(family="Inter", size=14),
+            text_color="#52525b"
+        )
+        self.subtitle_label.grid(row=1, column=0, padx=30, pady=(0, 30))
 
-        # Variable interna para saber si el usuario seleccionó un archivo físico
+        # ---------------------------------------------
+        # 2. Área de Entradas (Inputs)
+        # ---------------------------------------------
+        self.input_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.input_frame.grid(row=2, column=0, padx=50, pady=10, sticky="ew")
+        self.input_frame.grid_columnconfigure(0, weight=1)
+        
+        self.file_button = ctk.CTkButton(
+            self.input_frame, 
+            text="📁 Explorar archivos multimedia...", 
+            font=ctk.CTkFont(family="Inter", size=14, weight="normal"),
+            fg_color="#e4e4e7",
+            hover_color="#d4d4d8",
+            text_color="#18181b",
+            height=48,
+            corner_radius=12,
+            command=self.select_file
+        )
+        self.file_button.grid(row=0, column=0, pady=(0, 5), sticky="ew")
+
+        self.file_path_label = ctk.CTkLabel(
+            self.input_frame, 
+            text="Ningún archivo seleccionado", 
+            font=ctk.CTkFont(family="Inter", size=12),
+            text_color="#71717a"
+        )
+        self.file_path_label.grid(row=1, column=0, pady=(0, 15))
+
+        self.youtube_entry = ctk.CTkEntry(
+            self.input_frame, 
+            placeholder_text="🔗 Pega el enlace de YouTube aquí...",
+            font=ctk.CTkFont(family="Inter", size=14),
+            height=48,
+            corner_radius=12,
+            border_width=1,
+            border_color="#d4d4d8",
+            fg_color="#ffffff",
+            text_color="#18181b"
+        )
+        self.youtube_entry.grid(row=2, column=0, pady=10, sticky="ew")
+
+        # ---------------------------------------------
+        # 3. Acción Principal
+        # ---------------------------------------------
+        self.process_button = ctk.CTkButton(
+            self.main_frame, 
+            text="✨ Generar Doblaje", 
+            font=ctk.CTkFont(family="Inter", size=16, weight="bold"), 
+            fg_color=ACCENT_COLOR, 
+            hover_color=HOVER_COLOR,
+            height=54,
+            corner_radius=14,
+            command=self.start_processing
+        )
+        self.process_button.grid(row=3, column=0, padx=50, pady=(20, 25), sticky="ew")
+
+        # ---------------------------------------------
+        # 4. Progreso y Logs
+        # ---------------------------------------------
+        self.progress_bar = ctk.CTkProgressBar(
+            self.main_frame, 
+            height=6,
+            corner_radius=3,
+            progress_color=ACCENT_COLOR,
+            fg_color="#e4e4e7"
+        )
+        self.progress_bar.grid(row=4, column=0, padx=50, pady=(0, 15), sticky="ew")
+        self.progress_bar.set(0)
+
+        self.log_textbox = ctk.CTkTextbox(
+            self.main_frame, 
+            state="disabled",
+            font=ctk.CTkFont(family="Fira Code", size=12), # Fuente monoespaciada para logs
+            fg_color="#f8fafc",
+            text_color="#3f3f46",
+            border_width=1,
+            border_color="#e4e4e7",
+            corner_radius=12
+        )
+        self.log_textbox.grid(row=5, column=0, padx=50, pady=(0, 40), sticky="nsew")
+        
+        self.log_message("🚀 Sistema inicializado. Esperando video...")
+
+        # Variables internas
         self.selected_file_path = ""
-
     def select_file(self):
-        """Abre un diálogo del sistema nativo para seleccionar un archivo .mp4"""
+        """Abre un diálogo del sistema nativo para seleccionar un archivo .mp4 o .srt"""
         file_path = filedialog.askopenfilename(
             initialdir="/home/karlmoz",
-            title="Seleccionar video",
-            filetypes=[("Archivos MP4", "*.mp4")]
+            title="Seleccionar multimedia",
+            filetypes=[("Archivos de video y SRT", "*.mp4 *.mkv *.avi *.srt"), ("Video", "*.mp4 *.mkv *.avi"), ("Subtítulos SRT", "*.srt"), ("Todos los archivos", "*.*")]
         )
         if file_path:
             self.selected_file_path = file_path
-            self.file_path_label.configure(text=file_path, text_color="white")
+            self.file_path_label.configure(text=file_path, text_color="#18181b")
             # Limpiamos el campo de YouTube si elije algo local
             self.youtube_entry.delete(0, 'end') 
             self.log_message(f"Archivo seleccionado: {file_path}")
@@ -122,12 +188,14 @@ class DoblajeApp(ctk.CTk):
         """Pipeline central que orquesta todos los módulos (ejecutado en hilo secundario)"""
         # Importación local para evitar la dependencia circular rígida en este archivo UI
         import os
+        import shutil
         from modules.downloader import download_video
         from modules.extractor import extract_audio
         from modules.transcriber import transcribe_audio
         from modules.translator import translate_transcription
         from modules.tts import generate_speech
         from modules.assembler import assemble_video
+        from modules.srt_parser import parse_srt_to_json
 
         try:
             working_video_path = self.selected_file_path
@@ -143,19 +211,28 @@ class DoblajeApp(ctk.CTk):
                 nombre_archivo = os.path.basename(working_video_path)
                 self.log_message(f"✅ Video descargado con éxito: {nombre_archivo}")
                 self.progress_bar.set(0.15)
+                
+            is_srt = working_video_path and working_video_path.lower().endswith('.srt')
+            base_name = os.path.splitext(os.path.basename(working_video_path))[0]
+            
+            if is_srt:
+                self.log_message("📄 Archivo de subtítulos detectado. Omitiendo extracción de audio y transcripción...")
+                transcription_path = parse_srt_to_json(working_video_path, temp_dir)
+                self.log_message("✅ Subtítulos procesados para traducción.")
+                self.progress_bar.set(0.5)
+            else:
+                # FASE 4: Extracción de Audio
+                self.log_message("🎵 Extrayendo pista de audio del video...")
+                audio_path = extract_audio(working_video_path, temp_dir)
+                nombre_audio = os.path.basename(audio_path)
+                self.log_message(f"✅ Audio preparado con éxito: {nombre_audio}")
+                self.progress_bar.set(0.3)
 
-            # FASE 4: Extracción de Audio
-            self.log_message("🎵 Extrayendo pista de audio del video...")
-            audio_path = extract_audio(working_video_path, temp_dir)
-            nombre_audio = os.path.basename(audio_path)
-            self.log_message(f"✅ Audio preparado con éxito: {nombre_audio}")
-            self.progress_bar.set(0.3)
-
-            # FASE 5: Transcripción de Audio
-            self.log_message("✍️ Transcribiendo audio (esto puede tomar varios minutos). Por favor espera...")
-            transcription_path = transcribe_audio(audio_path, temp_dir, model_size="base")
-            self.log_message("✅ Transcripción generada: transcription.json")
-            self.progress_bar.set(0.5)
+                # FASE 5: Transcripción de Audio
+                self.log_message("✍️ Transcribiendo audio (esto puede tomar varios minutos). Por favor espera...")
+                transcription_path = transcribe_audio(audio_path, temp_dir, model_size="base")
+                self.log_message("✅ Transcripción generada: transcription.json")
+                self.progress_bar.set(0.5)
 
             # FASE 6: Traducción de Texto con Gemini
             self.log_message("🌐 Traduciendo transcripción al español usando Gemini...")
@@ -165,15 +242,22 @@ class DoblajeApp(ctk.CTk):
 
             # FASE 7: Síntesis de voz (TTS)
             self.log_message("🗣️ Sintetizando doblaje de voz y respetando tiempos originales...")
-            tts_audio_path = generate_speech(translation_path, temp_dir, voice='es-ES-AlvaroNeural')
-            self.log_message("✅ Audio de doblaje sintetizado con éxito!")
+            tts_audio_path = generate_speech(translation_path, temp_dir, voice='es-MX-DaliaNeural')
+            
+            final_audio_output = os.path.join(os.getcwd(), f"{base_name}_doblado.wav")
+            shutil.copy2(tts_audio_path, final_audio_output)
+            self.log_message(f"✅ Audio de doblaje sintetizado con éxito y guardado en: {final_audio_output}")
             self.progress_bar.set(0.85)
 
             # FASE 8: Ensamblado del Video (con mezcla de audio ffmpeg)
-            self.log_message("🎬 Mezclando doblaje con video original en volumen atenuado...")
-            final_output = os.path.join(os.getcwd(), "video_doblado_final.mp4")
-            assemble_video(working_video_path, tts_audio_path, final_output)
-            self.log_message(f"🎉 ¡PROCESO FINALIZADO CON ÉXITO! Video exportado a: {final_output}")
+            if not is_srt:
+                self.log_message("🎬 Mezclando doblaje con video original en volumen atenuado...")
+                final_video_output = os.path.join(os.getcwd(), f"{base_name}_doblado.mp4")
+                assemble_video(working_video_path, tts_audio_path, final_video_output)
+                self.log_message(f"🎉 ¡PROCESO FINALIZADO CON ÉXITO! Video exportado a: {final_video_output}")
+            else:
+                self.log_message("🎉 ¡PROCESO FINALIZADO CON ÉXITO! Solo se generó el audio doblado para el subtítulo.")
+                
             self.progress_bar.set(1.0)
         
         except ValueError as e:
