@@ -10,6 +10,16 @@ class DoblajeApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        # Ocultar carpetas y archivos ocultos en el filedialog nativo de Tkinter en Linux
+        try:
+            # 1. Forzar la carga silenciosa del módulo de Tcl 'tkfbox.tcl' enviando un argumento inválido
+            self.tk.eval('catch {tk_getOpenFile -bogus}')
+            # 2. Sobrescribir las variables por defecto del diálogo en memoria (que de otra forma lo muestran)
+            self.tk.call('set', '::tk::dialog::file::showHiddenBtn', '1')
+            self.tk.call('set', '::tk::dialog::file::showHiddenVar', '0')
+        except Exception:
+            pass
+
         # Configuración de la ventana principal
         self.title("Doblaje Automático de Videos")
         self.geometry("800x700")
