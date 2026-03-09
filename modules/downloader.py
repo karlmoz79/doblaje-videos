@@ -24,8 +24,8 @@ def download_video(url: str, output_folder: str) -> str:
     outtmpl_pattern = os.path.join(output_folder, '%(title)s.%(ext)s')
 
     ydl_opts = {
-        # Solicitamos tratar de bajar video+audio unificados como mp4 (la mejor calidad que ya venga premezclada, o la general si no)
-        'format': 'best[ext=mp4]/best', 
+        # Solicitamos video de max 720p con audio (incluso juntos o separados si hace falta merge)
+        'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best', 
         'outtmpl': outtmpl_pattern,
         'quiet': True,           # Para que no sature la consola con texto
         'no_warnings': True      # Omitir warnings molestos

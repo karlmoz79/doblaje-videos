@@ -194,11 +194,16 @@ class DoblajeApp(ctk.CTk):
         from modules.transcriber import transcribe_audio
         from modules.translator import translate_transcription
         from modules.tts import generate_speech
-        from modules.assembler import assemble_video
         from modules.srt_parser import parse_srt_to_json
 
         try:
             working_video_path = self.selected_file_path
+            
+            # Directorios de salida
+            videos_dir = os.path.expanduser("~/Vídeos")
+            docs_dir = os.path.expanduser("~/Documentos")
+            os.makedirs(videos_dir, exist_ok=True)
+            os.makedirs(docs_dir, exist_ok=True)
             
             # Directorio universal de trabajo temporal para todas las fases
             temp_dir = os.path.join(os.getcwd(), "temp")
@@ -207,7 +212,7 @@ class DoblajeApp(ctk.CTk):
             # FASE 3: Descarga de YouTube (si aplica)
             if not working_video_path and yt_link:
                 self.log_message("⬇️ Iniciando descarga desde YouTube...")
-                working_video_path = download_video(yt_link, temp_dir)
+                working_video_path = download_video(yt_link, videos_dir)
                 nombre_archivo = os.path.basename(working_video_path)
                 self.log_message(f"✅ Video descargado con éxito: {nombre_archivo}")
                 self.progress_bar.set(0.15)
@@ -244,20 +249,22 @@ class DoblajeApp(ctk.CTk):
             self.log_message("🗣️ Sintetizando doblaje de voz y respetando tiempos originales...")
             tts_audio_path = generate_speech(translation_path, temp_dir, voice='es-MX-DaliaNeural')
             
-            final_audio_output = os.path.join(os.getcwd(), f"{base_name}_doblado.wav")
+            final_audio_output = os.path.join(videos_dir, f"{base_name}_doblado.wav")
             shutil.copy2(tts_audio_path, final_audio_output)
             self.log_message(f"✅ Audio de doblaje sintetizado con éxito y guardado en: {final_audio_output}")
             self.progress_bar.set(0.85)
 
-            # FASE 8: Ensamblado del Video (con mezcla de audio ffmpeg)
-            if not is_srt:
-                self.log_message("🎬 Mezclando doblaje con video original en volumen atenuado...")
-                final_video_output = os.path.join(os.getcwd(), f"{base_name}_doblado.mp4")
-                assemble_video(working_video_path, tts_audio_path, final_video_output)
-                self.log_message(f"🎉 ¡PROCESO FINALIZADO CON ÉXITO! Video exportado a: {final_video_output}")
-            else:
-                self.log_message("🎉 ¡PROCESO FINALIZADO CON ÉXITO! Solo se generó el audio doblado para el subtítulo.")
-                
+            # FASE 8: Copiar metadatos y finalizar sin mp4
+            self.log_message("📂 Exportando archivos JSON de transcripción y traducción...")
+            transcription_dest = os.path.join(docs_dir, f"{base_name}_transcription.json")
+            translation_dest = os.path.join(docs_dir, f"{base_name}_translated.json")
+            
+            if 'transcription_path' in locals() and transcription_path and os.path.exists(transcription_path):
+                shutil.copy2(transcription_path, transcription_dest)
+            if 'translation_path' in locals() and translation_path and os.path.exists(translation_path):
+                shutil.copy2(translation_path, translation_dest)
+
+            self.log_message(f"🎉 ¡PROCESO FINALIZADO CON ÉXITO! Archivos de resultados guardados en {videos_dir} y {docs_dir}.")
             self.progress_bar.set(1.0)
         
         except ValueError as e:
