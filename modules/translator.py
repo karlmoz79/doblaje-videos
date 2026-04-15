@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from pydantic import BaseModel
 from google import genai
 from dotenv import load_dotenv
@@ -12,6 +13,29 @@ class TranslatedSegment(BaseModel):
 
 class TranslationResponse(BaseModel):
     segments: list[TranslatedSegment]
+
+
+PRIMARY_MODEL = "gemini-2.5-flash"
+FALLBACK_MODELS = [
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+]
+MAX_RETRIES_PER_MODEL = 3
+BASE_RETRY_DELAY_SECONDS = 3
+
+
+def _is_retryable_gemini_error(error: Exception) -> bool:
+    error_text = str(error).lower()
+    retryable_markers = (
+        "503",
+        "unavailable",
+        "high demand",
+        "temporarily unavailable",
+        "resource exhausted",
+        "deadline exceeded",
+        "timeout",
+    )
+    return any(marker in error_text for marker in retryable_markers)
 
 def translate_transcription(json_path: str, output_folder: str, target_language: str = "español") -> str:
     """
@@ -54,21 +78,50 @@ def translate_transcription(json_path: str, output_folder: str, target_language:
     {json.dumps(segments, ensure_ascii=False, indent=2)}
     """
     
-    # 3. Llamada al modelo 
-    try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config={
-                'response_mime_type': 'application/json',
-                'response_schema': TranslationResponse,
-            },
+    # 3. Llamada al modelo con reintentos y fallback para errores temporales del servicio.
+    translated_segments = None
+    attempted_models = []
+    last_error = None
+
+    for model_name in [PRIMARY_MODEL, *FALLBACK_MODELS]:
+        attempted_models.append(model_name)
+
+        for attempt in range(1, MAX_RETRIES_PER_MODEL + 1):
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config={
+                        'response_mime_type': 'application/json',
+                        'response_schema': TranslationResponse,
+                    },
+                )
+                # Gemini responderá con un string JSON que cumple el esquema.
+                response_json = json.loads(response.text)
+                translated_segments = response_json.get("segments", [])
+                break
+            except Exception as e:
+                last_error = e
+
+                if not _is_retryable_gemini_error(e):
+                    raise RuntimeError(
+                        f"❌ Error al comunicarse con Gemini o leyendo el JSON resultante: {str(e)}"
+                    ) from e
+
+                if attempt < MAX_RETRIES_PER_MODEL:
+                    delay_seconds = BASE_RETRY_DELAY_SECONDS * attempt
+                    time.sleep(delay_seconds)
+                    continue
+
+        if translated_segments is not None:
+            break
+
+    if translated_segments is None:
+        attempted_models_text = ", ".join(attempted_models)
+        raise RuntimeError(
+            "❌ Gemini no estuvo disponible tras varios reintentos. "
+            f"Modelos probados: {attempted_models_text}. Último error: {last_error}"
         )
-        # Geminí nos responderá con un string en JSON que cumple el esquema.
-        response_json = json.loads(response.text)
-        translated_segments = response_json.get("segments", [])
-    except Exception as e:
-        raise RuntimeError(f"❌ Error al comunicarse con Gemini o leyendo el JSON resultante: {str(e)}")
         
     translated_data = {
         "source_language": data.get("source_language", "auto"),

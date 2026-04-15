@@ -1,70 +1,120 @@
-# Aplicación de Doblaje Automático de Video 🎬
+# Aplicación de Doblaje Automático de Video
 
-Una poderosa herramienta con interfaz gráfica (GUI) que automatiza por completo el proceso de doblar videos del inglés (u otros idiomas) al español. Esta aplicación extrae el audio, lo transcribe, lo traduce conservando sus marcas de tiempo originales, sintetiza una nueva voz y mezcla todo junto en un video final.
+Aplicación de escritorio en Python para procesar videos o subtítulos `.srt` y generar un doblaje en español usando un pipeline de IA. La interfaz está construida con `customtkinter` y el proyecto se gestiona exclusivamente con `uv`.
 
-## Características ✨
+## Estado actual
 
-1. **Soporte Universal de Entrada**: Proporciona el enlace de un video de YouTube, un archivo de video local (.mp4, .mkv, .avi) o directamente proporciona un archivo de subtítulos `.srt`.
-2. **Extracción Automática**: Usa `ffmpeg` para desvincular el audio del video de forma eficiente.
-3. **Transcripción Precisa**: Implementa `faster-whisper` para detectar y transcribir el idioma original generando un mapa estructurado de texto y tiempos (este paso se omite si provees un `.srt`).
-4. **Traducción Inteligente**: Emplea el SDK oficial moderno `google-genai` de Gemini (Google) usando "Structured Outputs" para asegurar que la traducción se mantenga perfectamente ensamblada al formato de tiempos JSON.
-5. **Generador de Voces (TTS)**: Utiliza `edge-tts` con voces neuronales (como *es-ES-AlvaroNeural*) para sintetizar fragmentos de voz de alta calidad adaptados a cada marca de tiempo y `pydub` para alinearlos milimétricamente.
-6. **Ensamblado Profesional**: Mezcla el audio original atenuado junto a la nueva voz resaltada sobre el video inicial (o genera un archivo de audio final si usas `.srt`).
-7. **Interfaz Moderna**: Cuenta con un panel sumamente atractivo y fluido construido con `customtkinter` (Premium Light Theme).
+El pipeline implementado hoy hace esto:
 
-## Requisitos de Sistema ⚙️
+1. Acepta una URL de YouTube, un video local (`.mp4`, `.mkv`, `.avi`) o un archivo `.srt`.
+2. Si la entrada es YouTube, descarga el video con `yt-dlp`.
+3. Si la entrada es un video, extrae su audio con `moviepy`.
+4. Si la entrada es un `.srt`, omite extracción y transcripción.
+5. Transcribe con `faster-whisper` cuando aplica.
+6. Traduce con Gemini usando `google-genai` y `Pydantic`.
+7. Genera el doblaje con `edge-tts` y lo ensambla en una pista `.wav`.
 
-- Sistema operativo **Linux / macOS / Windows**
-- **FFmpeg** instalado globalmente en el sistema y accesible desde el PATH (`sudo apt install ffmpeg` en Ubuntu/Debian).
-- **Python 3.10+** (Recomendamos encarecidamente la gestión mediante **`uv`**).
+Importante: en el estado actual de la app, la GUI exporta un audio doblado `.wav` y archivos JSON intermedios. El módulo `modules/assembler.py` existe, pero todavía no está conectado al flujo principal de la interfaz para producir un video final `.mp4`.
 
-## Instalación y Configuración 🚀
+## Características actuales
 
-La gestión del proyecto está hecha a través de `uv`. Sigue estos pasos para configurarlo:
+- Entrada por URL de YouTube, video local o subtítulos `.srt`.
+- Interfaz gráfica con `customtkinter`.
+- Transcripción local con `faster-whisper`.
+- Traducción estructurada con Gemini.
+- Síntesis de voz con `edge-tts`.
+- Alineación de segmentos con `pydub`.
+- Manejo más robusto de errores temporales de Gemini:
+  - Reintentos automáticos ante errores como `503 UNAVAILABLE`.
+  - Espera progresiva entre intentos.
+  - Fallback automático a otros modelos si `gemini-2.5-flash` sigue saturado.
 
-1. **Instalar dependencias**:
+## Requisitos
+
+- Python `3.13+`
+- `uv`
+- `ffmpeg` disponible en el `PATH`
+- Variable de entorno `GEMINI_API_KEY`
+
+Ejemplo en Ubuntu/Debian:
+
 ```bash
-uv sync # O simplemente uv add si necesitas añadir un paquete extra
+sudo apt install ffmpeg
 ```
 
-2. **Configuración de la API Key (Gemini)**:
-El servicio de traducción funciona mediante la Inteligencia Artificial de Google (Gemini). Antes de ejecutar el proyecto debes tener disponible la variable de entorno correspondiente:
+## Instalación
+
+```bash
+uv sync
+```
+
+Configura tu API key de Gemini:
+
 ```bash
 export GEMINI_API_KEY="tu_clave_de_api_aqui"
 ```
-*(Si lo prefieres, puedes usar python-dotenv y crear un archivo `.env` en la raíz del proyecto para alojar esta clave permanentemente)*.
 
-## Uso 💻
+También puedes usar un archivo `.env` en la raíz del proyecto.
 
-Para iniciar la aplicación, simplemente ejecuta el archivo principal a través del ecosistema de `uv`:
+## Ejecución
 
 ```bash
 uv run python main.py
 ```
 
-1. **Ingreso:** Pega la URL del video de YouTube o usa el botón "Seleccionar Archivo" para abrir tu video local (.mp4, .mkv, .avi) o archivo de subtítulos (.srt).
-2. **Proceso:** Presiona el botón "Iniciar Doblaje".
-3. **Magia:** Observa los registros y la barra de progreso mientras la aplicación procesa las Fases automatizadas. Si provees un `.srt`, el sistema inteligentemente omitirá el uso intensivo de extracción de audio y transcripción saltando rápido a la etapa de traducción.
-4. **Resultado:** Al concluir, tu archivo doblado aparecerá en el mismo directorio de entrada con el sufijo `_doblado` (por ejemplo: `mi_video_doblado.mp4` o `mi_audio_doblado.wav`).
+## Flujo de uso
 
-## Estructura del Proyecto 📁
+1. Abre la aplicación.
+2. Selecciona un archivo local o pega un enlace de YouTube.
+3. Pulsa `Generar Doblaje`.
+4. Revisa el progreso en el panel de logs.
 
-```
-video_doblaje/
-├── main.py              # Punto de entrada de la aplicación
-├── README.md            # Este archivo
+## Salidas actuales
+
+Cuando el proceso termina correctamente, la app genera:
+
+- Un archivo de audio doblado `.wav` en `~/Vídeos`
+- Un JSON de transcripción en `~/Documentos`
+- Un JSON de traducción en `~/Documentos`
+
+Los nombres se construyen con el nombre base del archivo de entrada:
+
+- `mi_video_doblado.wav`
+- `mi_video_transcription.json`
+- `mi_video_translated.json`
+
+## Estructura
+
+```text
+.
+├── main.py
 ├── gui/
-│   └── app.py           # Configuración de CustomTkinter y orquestación del flujo
-└── modules/
-    ├── downloader.py    # Gestión de descargas y procesamiento de YouTube (yt-dlp)
-    ├── extractor.py     # Separación de canales de audio (ffmpeg)
-    ├── srt_parser.py    # Parseador de subtítulos SRT locales saltando fases exhaustivas
-    ├── transcriber.py   # Motor Whisper de inteligencia artificial off-line
-    ├── translator.py    # Puente a Gemini API (google-genai) con Structured Outputs
-    ├── tts.py           # Text-to-Speech neuronal y alineación (edge-tts + pydub)
-    └── assembler.py     # Ensamblado del video final (ffmpeg mix audio overlay)
+│   └── app.py
+├── modules/
+│   ├── assembler.py
+│   ├── downloader.py
+│   ├── extractor.py
+│   ├── srt_parser.py
+│   ├── transcriber.py
+│   ├── translator.py
+│   └── tts.py
+├── pyproject.toml
+└── README.md
 ```
 
-## Aclaraciones y Notas 📝
+## Módulos
 
-- Recuerda que la sincronía del video depende directamente de la calidad del motor de transcripción `faster-whisper`. Por defecto, está configurado para ejecutarse en modelo `base` con CPU para agilizar pruebas. Puedes ajustarlo a `small` o `medium` dentro de la llamada en `app.py` para mayor precisión de marcas temporales.
+- `gui/app.py`: interfaz y orquestación principal del pipeline.
+- `modules/downloader.py`: descarga de videos desde YouTube.
+- `modules/extractor.py`: extracción de audio desde video.
+- `modules/transcriber.py`: transcripción con Whisper.
+- `modules/srt_parser.py`: convierte `.srt` a JSON compatible con el pipeline.
+- `modules/translator.py`: traducción con Gemini, schema validation, reintentos y fallback de modelo.
+- `modules/tts.py`: generación de voz y ensamblado del audio doblado final.
+- `modules/assembler.py`: mezcla de video + audio doblado, disponible pero no integrado todavía en la GUI.
+
+## Notas
+
+- La primera ejecución de `faster-whisper` puede tardar más porque descarga el modelo.
+- La traducción depende de un servicio externo y puede fallar temporalmente por saturación.
+- El proyecto usa `uv`; no se recomienda `pip`, `poetry` ni `conda` para este repositorio.
