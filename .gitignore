@@ -27,3 +27,7 @@ temp/
 # Excepciones si de verdad queremos guardar o tener un sample json, etc (opcional)
 !gui/
 !modules/
+
+# Archivos de herramientas externas
+.codex
+
